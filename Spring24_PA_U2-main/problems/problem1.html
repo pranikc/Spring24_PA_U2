@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CPSC 487/587</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.3.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quaternion@1.5.1/quaternion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/numeric@1.2.6/numeric-1.2.6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+              "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+              "three/": "https://unpkg.com/three@0.160.0/"
+            }
+        }
+    </script>
+</head>
+<body>
+<script type="module">
+    import {get_default_lil_gui, ThreeEngine} from "../js/utils/utils_three.js";
+
+    // todo: use the gui initialized below to control the position of a 3D sphere.
+    // todo: the sphere should be movable along the ranges x: [-2,2], y: [-2, 2], z: [-2, 2].
+    // todo:  The sphere should have a radius of 0.04 and can be any color/ opacity you want.
+
+    let engine = ThreeEngine.new_default_3d();
+
+    let settings = {
+        mesh_visible: true,
+        draw_points: true,
+        wireframe_visible: true,
+        x: 0,
+        y: 0,
+        z: 0,
+    }
+
+    let gui = get_default_lil_gui();
+
+    gui.add(settings, 'draw_points').name('Draw Points');
+    gui.add(settings, 'wireframe_visible').name('Draw Wireframe');
+    gui.add(settings, 'mesh_visible').name('Draw Mesh');
+
+    let folder = gui.addFolder('Coords');
+    folder.add(settings, 'x', -2.0, 2.0).name('X');
+    folder.add(settings, 'y', -2.0, 2.0).name('Y');
+    folder.add(settings, 'z', -2.0, 2.0).name('Z');
+
+    //engine.draw_debug_sphere(center_point = (settings.x, settings.y, settings.z), radius = 0.04);
+
+    engine.animation_loop(() => {
+        engine.draw_debug_sphere([settings.x, settings.y, settings.z], 0.04, 0x000000, 1.0);
+    });
+
+</script>
+</body>
+</html>

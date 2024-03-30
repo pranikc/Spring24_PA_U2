@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CPSC 487/587</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.3.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quaternion@1.5.1/quaternion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/numeric@1.2.6/numeric-1.2.6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+              "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+              "three/": "https://unpkg.com/three@0.160.0/"
+            }
+        }
+    </script>
+</head>
+<body>
+<script type="module">
+    import {ThreeEngine, get_default_lil_gui} from "../js/utils/utils_three.js";
+
+    // todo: recreate this visualization, demonstrating your understanding of displacement-based distance in SE(2)
+    // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/SE2_distance2.html
+    // todo: make sure you are using the displacement-based distance!
+    // todo: or, feel free to come up with any visualization here that demonstrates your understanding of SE(2) distance
+
+    let engine = ThreeEngine.new_default_2d();
+
+    let settings = {
+        theta1: 0,
+        translation_x1: 0,
+        translation_y1: 0,
+        theta2: 0,
+        translation_x2: 0,
+        translation_y2: 0,
+        disp: 0,
+    }
+
+    let gui = get_default_lil_gui();
+    gui.add(settings, 'theta1', -2*Math.PI, 2*Math.PI).name('Theta 1: ');
+    gui.add(settings, 'translation_x1', -10, 10).name('Translation X1: ');
+    gui.add(settings, 'translation_y1', -10, 10).name('Translation Y1: ');
+    gui.add(settings, 'theta2', -2*Math.PI, 2*Math.PI).name('Theta 2: ');
+    gui.add(settings, 'translation_x2', -10, 10).name('Translation X2: ');
+    gui.add(settings, 'translation_y2', -10, 10).name('Translation Y2: ');
+
+    gui.add(settings, 'disp').name('Disp_val: ').listen().disable();
+
+    engine.add_standard2Dshape_as_mesh_object(0x00eeff);
+    engine.add_standard2Dshape_as_mesh_object(0xFFFF00);
+
+    let standard_points1 = engine.get_local_vertex_positions_of_mesh_object(0);
+    let standard_points2 = engine.get_local_vertex_positions_of_mesh_object(1);
+
+    function SE2(theta, tx, ty, point) {
+        let rot_mat = [[Math.cos(theta), Math.sin(theta)], [-Math.sin(theta), Math.cos(theta)]]
+        return [rot_mat[0][0]*point[0] + rot_mat[0][1]*point[1] + tx, rot_mat[1][0]*point[0] + rot_mat[1][1]*point[1] + ty];
+    }
+
+    function multiplyMatrices(m1, m2) {
+        var result = [];
+        for (var i = 0; i < m1.length; i++) {
+            result[i] = [];
+            for (var j = 0; j < m2[0].length; j++) {
+                var sum = 0;
+                for (var k = 0; k < m1[0].length; k++) {
+                    sum += m1[i][k] * m2[k][j];
+                }
+                result[i][j] = sum;
+            }
+        }
+        return result;
+    }
+
+    function disp(t1,tx1,ty1,t2,tx2,ty2) { // with respect to manifold of SE(2)
+        let a = [[Math.cos(t1), Math.sin(t1), tx1], [-Math.sin(t1), Math.cos(t1), ty1], [0,0,1]];
+        let b = [[Math.cos(t2), Math.sin(t2), tx2], [-Math.sin(t2), Math.cos(t2), ty2], [0,0,1]];
+        let disp_mat = multiplyMatrices(math.inv(a), b);
+
+        let p;
+        let q;
+        let a1 = Math.atan2(disp_mat[1][0], disp_mat[0][0]);
+        if (Math.abs(a1) < 0.01) {
+            p = 1.0 - (a1**2.0/6.0) + (a1**4.0/120.0);
+            q = a1/2.0 - (a1**3.0/24.0) + (a1**5.0/720.0);
+        }
+        else {
+            console.log('inside');
+            p = Math.sin(a1)/a1
+            q = (1.0-Math.cos(a1))/a1
+        }
+
+        let trans_inv = [[p, q],[-q, p]];
+        for (let i = 0; i < 2; i++) {
+            for (let j = 0; j < 2; j++) {
+                trans_inv[i][j] = trans_inv[i][j] * (1/(p**2 + q**2));
+            }
+        }
+
+        let t = [[disp_mat[0][2]], [disp_mat[1][2]]];
+        let tmp = [trans_inv[0][0]*t[0] + trans_inv[0][1]*t[1], trans_inv[1][0]*t[0] + trans_inv[1][1]*t[1]];
+
+        let a2 = tmp[0];
+        let a3 = tmp[1];
+
+        return Math.sqrt(a1**2 + a2**2 + a3**2); // question about this, especially at 2pi
+    }
+    
+    engine.animation_loop(() => {
+        let new_standard_points1 = [];
+        let new_standard_points2 = [];
+
+        for (var i = 0; i < standard_points1.length; i++) { // both have same number of points
+            new_standard_points1.push(SE2(settings.theta1, settings.translation_x1, settings.translation_y1, standard_points1[i]));
+            new_standard_points2.push(SE2(settings.theta2, settings.translation_x2, settings.translation_y2, standard_points2[i]));
+        }
+
+        // todo: uncomment these lines after you've computed new_standard_points and new_wireframe_points
+        engine.update_vertex_positions_of_mesh_object(0, new_standard_points1);
+        engine.update_vertex_positions_of_mesh_object(1, new_standard_points2);
+
+        settings.disp = disp(settings.theta1, settings.translation_x1, settings.translation_y1, settings.theta2, settings.translation_x2, settings.translation_y2);
+
+        engine.mesh_objects[0].visible = true;
+        engine.mesh_objects[1].visible = true;
+    });
+
+</script>
+</body>
+</html>

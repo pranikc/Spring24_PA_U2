@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>CPSC 487/587</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19.1/dist/lil-gui.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.3.0/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quaternion@1.5.1/quaternion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/numeric@1.2.6/numeric-1.2.6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stats.js@0.17.0/build/stats.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+              "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+              "three/": "https://unpkg.com/three@0.160.0/"
+            }
+        }
+    </script>
+</head>
+<body>
+<script type="module">
+    import {ThreeEngine, get_default_lil_gui} from "../js/utils/utils_three.js";
+
+    // todo: recreate this visualization, demonstrating your understanding of SE(2)
+    // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/point_mapping_2D_direct_isometry.html
+    // todo: (no need to draw the unit circle here)
+    // todo: or, feel free to come up with any visualization here that demonstrates your understanding of SE(2)
+
+    let engine = ThreeEngine.new_default_2d();
+
+    let settings = {
+        theta: 0,
+        translation_x: 0,
+        translation_y: 0,
+    }
+
+    let gui = get_default_lil_gui();
+    gui.add(settings, 'theta', -2*Math.PI, 2*Math.PI).name('Theta: ');
+    gui.add(settings, 'translation_x', -2, 2).name('Translation X: ');
+    gui.add(settings, 'translation_y', -2, 2).name('Translation Y: ');
+
+    engine.add_standard2Dshape_as_mesh_object(0x00eeff);
+    engine.toggle_mesh_object_wireframe_visibility(0);
+
+    let standard_points = engine.get_local_vertex_positions_of_mesh_object(0);
+    //let wireframe_points = engine.get_local_vertex_positions_of_mesh_object_wireframe(0);
+
+    function SE2(theta, tx, ty, point) {
+        let rot_mat = [[Math.cos(theta), Math.sin(theta)], [-Math.sin(theta), Math.cos(theta)]]
+        return [rot_mat[0][0]*point[0] + rot_mat[0][1]*point[1] + tx, rot_mat[1][0]*point[0] + rot_mat[1][1]*point[1] + ty];
+    }
+    
+    engine.animation_loop(() => {
+        let new_standard_points = [];
+
+        for (var i = 0; i < standard_points.length; i++) {
+            new_standard_points.push(SE2(settings.theta, settings.translation_x, settings.translation_y, standard_points[i]));
+        }
+        console.log(new_standard_points);
+
+        // todo: uncomment these lines after you've computed new_standard_points and new_wireframe_points
+        engine.update_vertex_positions_of_mesh_object(0, new_standard_points);
+        //engine.update_vertex_positions_of_mesh_object_wireframe(0, new_wireframe_points);
+
+        engine.mesh_objects[0].visible = true;
+        engine.set_mesh_object_wireframe_visibility(0, true);
+    });
+
+</script>
+</body>
+</html>
